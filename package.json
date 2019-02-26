@@ -2,16 +2,21 @@
   "name": "markov-chain-img",
   "version": "1.0.0",
   "description": "Application of a Markov Chain Monte Carlo algorithm to image generation",
+  "author": "Ogus",
+  "license": "WTFPL",
+  "main": "src/markov-chain-img.js",
   "scripts": {
     "build": "terser src/markov-chain-img.js -c -m reserved=['MarkovChainImage'] > src/markov-chain-img.min.js"
   },
+  "devDependencies": {
+    "terser": "^3.9.2"
+  },
+  "keywords": [
+    
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ogus/markov-chain-img.git"
   },
-  "author": "Ogus",
-  "license": "ISC",
-  "devDependencies": {
-    "terser": "^3.9.2"
-  }
+  "homepage": "https://github.com/ogus/markov-chain-img#readme"
 }

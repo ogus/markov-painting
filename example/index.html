@@ -7,9 +7,8 @@
 	<meta name="Description" content="Implementation of a Markov Chain Monte Carlo algorithm, applied to image synthesis and generation">
 	<link rel="stylesheet" href="https://unpkg.com/picnic">
 
-	<script type="text/javascript" src="https://cdn.rawgit.com/ogus/random-queue/477127d9/random-queue.min.js"></script>
-	<script type="text/javascript" src="../src/markov-chain-img.min.js"></script>
-	<script type="text/javascript" src="demo.js" defer></script>
+	<script type="text/javascript" src="../src/markov-chain-img.js"></script>
+	<script type="text/javascript" src="example.js" defer></script>
 
 	<title>Markov Chain Image Generation - Demo</title>
 </head>
@@ -50,6 +49,8 @@
       </div>
     </div>
 	</div>
+
+	<img id="default_img" src="default.jpg" style="display: none;" />
 
 	<div class="modal">
 		<input id="modal_info" type="checkbox" /><label for="modal_info" class="overlay"></label>
