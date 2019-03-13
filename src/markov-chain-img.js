@@ -20,8 +20,8 @@
       if(this.lastIdx == 0) {
         return null;
       }
-      let idx = Math.floor(Math.random() * this.lastIdx);
-      let t = this.container[idx];
+      var idx = Math.floor(Math.random() * this.lastIdx);
+      var t = this.container[idx];
       this.container[idx] = this.container[--this.lastIdx];
       return t;
     }
@@ -42,12 +42,6 @@
     imgData[index+3] = 255;
   }
 
-  function setCompression(k) {
-    if (!isNaN(parseInt(k))) {
-      colorCompression = parseInt(k);
-    }
-  }
-
   function compress(value) {
     return Math.floor(value / colorCompression) * colorCompression;
   }
@@ -61,13 +55,13 @@
   }
 
   function colorFromKey(key) {
-    let array = key.split(",");
+    var array = key.split(",");
     return {r: parseInt(array[0]), g: parseInt(array[1]), b: parseInt(array[2])};
   }
 
   function addColorTransition(firstColor, secondColor) {
-    let firstKey = keyFromColor(compressColor(firstColor));
-    let secondKey = keyFromColor(compressColor(secondColor));
+    var firstKey = keyFromColor(compressColor(firstColor));
+    var secondKey = keyFromColor(compressColor(secondColor));
     if (!model.hasOwnProperty(firstKey)) {
       model[firstKey] = new Array();
     }
@@ -75,32 +69,31 @@
   }
 
   function getColorTransition(color) {
-    let firstKey = keyFromColor(color);
-    if (!model.hasOwnProperty(key)) {
+    var keyColor = keyFromColor(color);
+    if (!model.hasOwnProperty(keyColor)) {
       return null;
     }
-    let secondKey = model[firstKey][Math.floor(Math.random() * model[firstKey].length)];
-    return colorFromKey(secondKey);
+    var newKeyColor = model[keyColor][Math.floor(Math.random() * model[keyColor].length)];
+    return colorFromKey(newKeyColor);
   }
 
   function getRandomColor() {
-    let allKeys = Object.keys(model);
+    var allKeys = Object.keys(model);
     if (allKeys.length == 0) {
       return null;
     }
-    let firstKey = allKeys[Math.floor(Math.random() * allKeys.length)];
-    let secondKey = model[firstKey][Math.floor(Math.random() * model[firstKey].length)];
-    return colorFromKey(secondKey);
+    var key = allKeys[Math.floor(Math.random() * allKeys.length)];
+    return colorFromKey(key);
   }
 
   function feed(image) {
-    let x = 0, y = 0, idx = 0, color = null;
-    let xN = 0, yN = 0, idxN = 0, colorN = null;
+    var x = 0, y = 0, idx = 0, color = null;
+    var xN = 0, yN = 0, idxN = 0, colorN = null;
     for (x = 0; x < image.width; x++) {
       for (y = 0; y < image.height; y++) {
         idx = (x + y * image.width) << 2;
         color = getColor(image.data, idx);
-        for (let k = 0; k < neighbors.length; k++) {
+        for (var k = 0; k < neighbors.length; k++) {
           xN = x + neighbors[k].x;
           yN = y + neighbors[k].y;
           if (xN >= 0 && xN < image.width && yN >= 0 && yN < image.height) {
@@ -113,29 +106,19 @@
     }
   }
 
-  function feedAsync(image) {
-    return new Promise(function(resolve, reject) {
-      feed(image);
-      resolve();
-    });
-  }
-
-  function createImageData(ctx, width, height) {
-    if (Object.keys(model).length == 0) {
-      return null;
-    }
-    let imgData = ctx.createImageData(width, height);
-    let queue = new RandomQueue(width*height * 0.001);
+  function createImageData(width, height) {
+    var imgData = new Uint8ClampedArray((width * height) << 2);
+    var queue = new RandomQueue(width*height * 0.001);
     // initialization
-    let x = Math.floor(Math.random() * width);
-    let y = Math.floor(Math.random() * height);
-    let idx = (x + y * width) << 2;
-    let color = getRandomColor();
+    var x = Math.floor(Math.random() * width);
+    var y = Math.floor(Math.random() * height);
+    var idx = (x + y * width) << 2;
+    var color = getRandomColor();
     setColor(imgData, idx, color);
     queue.enqueue([x, y]);
     // creation loop
-    let coords = null, i = 0;
-    let xN = 0, yN = 0, idxN = 0, colorN = null;
+    var coords = null, i = 0;
+    var xN = 0, yN = 0, idxN = 0, colorN = null;
     while (queue.length() > 0) {
       coords = queue.dequeue();
       x = coords[0];
@@ -163,23 +146,39 @@
       model = {};
     };
 
-    this.setCompression = setCompression;
+    this.setCompression = function () {
+      if (!isNaN(parseInt(k))) {
+        colorCompression = parseInt(k);
+      }
+    };
+
+    this.feed = function (image, async) {
+      if (!async) {
+        return feed(image);
+      }
+      return new Promise(function(resolve, reject) {
+        feed(image);
+        resolve();
+      });
+    };
+
+    this.createImageData = function (width, height) {
+      if (Object.keys(model).length == 0) {
+        return null;
+      }
+      return createImageData(width, height);
+    };
 
     this.addColorTransition = addColorTransition;
     this.getColorTransition = getColorTransition;
     this.getRandomColor = getRandomColor;
-
-    this.feed = feed;
-    this.feedAsync = feedAsync;
-    this.createImageData = createImageData;
-  }
-
+  };
 
   // Worker message
   if (typeof self !== "undefined") {
     self.onmessage = function(e) {
-      feedAsync(e.data.image).then(function () {
-        postMessage({message: "ok", model: model});
+      feed(image, true).then(function () {
+        postMessage({message: 'ok'});
       });
     }
   }
