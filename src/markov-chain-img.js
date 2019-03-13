@@ -86,19 +86,19 @@
     return colorFromKey(key);
   }
 
-  function feed(image) {
+  function feed(imageData) {
     var x = 0, y = 0, idx = 0, color = null;
     var xN = 0, yN = 0, idxN = 0, colorN = null;
-    for (x = 0; x < image.width; x++) {
-      for (y = 0; y < image.height; y++) {
-        idx = (x + y * image.width) << 2;
-        color = getColor(image.data, idx);
+    for (x = 0; x < imageData.width; x++) {
+      for (y = 0; y < imageData.height; y++) {
+        idx = (x + y * imageData.width) << 2;
+        color = getColor(imageData.data, idx);
         for (var k = 0; k < neighbors.length; k++) {
           xN = x + neighbors[k].x;
           yN = y + neighbors[k].y;
-          if (xN >= 0 && xN < image.width && yN >= 0 && yN < image.height) {
-            idxN = (xN + yN * image.width) << 2;
-            colorN = getColor(image.data, idxN);
+          if (xN >= 0 && xN < imageData.width && yN >= 0 && yN < imageData.height) {
+            idxN = (xN + yN * imageData.width) << 2;
+            colorN = getColor(imageData.data, idxN);
             addColorTransition(color, colorN);
           }
         }
@@ -152,12 +152,12 @@
       }
     };
 
-    this.feed = function (image, async) {
+    this.feed = function (imageData, async) {
       if (!async) {
-        return feed(image);
+        return feed(imageData);
       }
       return new Promise(function(resolve, reject) {
-        feed(image);
+        feed(imageData);
         resolve();
       });
     };
@@ -177,9 +177,11 @@
   // Worker message
   if (typeof self !== "undefined") {
     self.onmessage = function(e) {
-      feed(image, true).then(function () {
-        postMessage({message: 'ok'});
-      });
+      model = {};
+      var inputData = e.data;
+      feed(inputData);
+      var outputData = createImageData(inputData.width, inputData.height)
+      postMessage(outputData);
     }
   }
 

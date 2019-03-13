@@ -43,7 +43,7 @@
     drawingSpeed: 0.06
   };
 
-  var srcImage = "default.jpg";
+  var srcImage = "img/default.jpg";
 
   /*
   * UI methods
