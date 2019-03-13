@@ -6,13 +6,20 @@
   "license": "WTFPL",
   "main": "src/markov-chain-img.js",
   "scripts": {
+    "test": "node test/test.js | faucet",
     "build": "terser src/markov-chain-img.js -c -m reserved=['MarkovChainImage'] > src/markov-chain-img.min.js"
   },
   "devDependencies": {
+    "faucet": "0.0.1",
+    "tape": "^4.10.1",
     "terser": "^3.9.2"
   },
   "keywords": [
-    
+    "markov-chain",
+    "markov",
+    "image",
+    "image-generator",
+    "procedural"
   ],
   "repository": {
     "type": "git",
