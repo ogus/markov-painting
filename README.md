@@ -1,9 +1,19 @@
-# Markov Chain Image
+# Markov Painting
 
-An image processing library that build Markov chains from input images and generate statistically identical output images.
+> Build Markov Chain from an image to generate beautiful flood-fill art
 
 
-## Introduction
+## Table of Contents
+
+ + [Description](#description)
+ + [Install](#install)
+ + [Usage](#usage)
+ + [API](#api)
+ + [Contributing](#contributing)
+ + [License](#license)
+
+
+## Description
 
 A Markov chain is a system that experiences transitions from one state to another, according to certain probabilistic rules. You can find a simple introduction on [setosa.io](http://setosa.io/ev/markov-chains/), and a more in-depth definition on [brilliant.org](https://brilliant.org/wiki/markov-chains/).
 
@@ -18,11 +28,30 @@ This module is able to build a Markov chain by analyzing the colors transitions 
 ![Output image](example/img/markov.png)
 
 
+## Install
+
+You can install the module with [npm](https://www.npmjs.com/)
+```sh
+npm install markov-painting
+```
+
+You can import the module with a CDN like [unpkg](https://unpkg.com/)
+```html
+<script type="text/javascript" src="https://unpkg.com/markov-painting@latest"></script>
+```
+
+You can clone the repository & include the `markov-painting.js` file in your project:
+```sh
+git clone https://github.com/ogus/markov-painting.git
+```
+
+
 ## Usage
 
+Instantiate a new MarkovPainting, feed it an image, and generate as many image as you want
 ```js
 // Create a new object
-var mkvChain = new MarkovChainImage();
+var markov = new MarkovPaintinge();
 
 // Create a new ImageData
 var image = new Image(...);
@@ -32,10 +61,10 @@ context.drawImage(image, 0, 0);
 var imageData = context.getImageData(0, 0, image.width, image.height);
 
 // Build the Markov chain with ImageData stats
-mkvChain.feed(imageData);
+markov.feedImageData(imageData);
 
 // Create a new ImageData
-var newImageData = mkvChain.createImageData(image.width, image.height);
+var markovData = mkvChain.createImageData(800, 600);
 ```
 
 
@@ -43,81 +72,48 @@ var newImageData = mkvChain.createImageData(image.width, image.height);
 
 ### Instanciation
 
-#### `new MarkovChainImage()`
+#### `new MarkovPaintinge()`
 
-Create a new `Object` that contains the Markov chain data.
+Create a new `Object` that contains a Markov Chain model.
 
-#### `MarkovChainImage.setCompression(n)`
+__Property__
 
-Change the compression level used to store colors. Changing this value will reduce the memory requirements.
-
-Default to `1`.
++ compression: THe compression level used to store colors in the model
 
 ### Build a Markov chain
 
-#### `MarkovChainImage.feed(ImageData [, async])`
+#### `MarkovPaintinge.feedImageData(imageData)`
 
-Main method to build the Markov chain
+Update the model of the Markov Chain with the color information of the input `ImageData` object
 
-If async is set to true, the method will run asynchronously and return a `Promise` (with no data).
+#### `MarkovPaintinge.feedColorMatrix(colorMatrix)`
 
-#### `MarkovChainImage.addColorTransition(color 1, color2)`
+Update the model of the Markov Chain with the color information of the input 2D `Array` containing colors as `{r, g, b}` values
 
-Utility method, add a new color transition to the chain.
+#### `MarkovPaintinge.addColorTransition(color1, color2)`
 
-Inputs : `Object {r, g, b}`
+Update the Markov chain with a single transition from color1 to color2, both defined as `{r, g, b}` values
 
-### Generate images
+### Generate an image
 
-#### `MarkovChainImage.createImageData(width, height)`
+#### `MarkovPaintinge.createImageData(width, height)`
 
-Main method to create a new image. Returns a `Uint8ClampedArray` with pixel color information, that can be used on a Canvas.
+Create an image as a `Uint8ClampedArray`, that can be used on a Canvas.
 
-#### `MarkovChainImage.getColorTransition(color)`
+#### `MarkovPaintinge.getNextColor(color)`
 
-Utility method, return a random color that follow the input color according to the Markov chain transition probability.
+Return a new `{r, g, b}` color that is adjacent to the input `{r, g, b}` color, based on the Markov chain transition probability
 
-Input & Output: `Object {r, g, b}`
+#### `MarkovPaintinge.getRandomColor()`
 
-#### `MarkovChainImage.getRandomColor()`
-
-Get a random color.
-
-### WebWorker
-
-You can use the library as a WebWorker.
-
-```js
-var worker = new WebWorker('path/to/markov-chain_img.js');
-
-worker.onmessage(function (e) {
-  var newImageData = e.data;
-  // do something
-});
-
-worker.postMessage(myImageData);
-```
-
-It accepts as message an `ImageData` and return a `Uint8ClampedArray`. It runs successively the `feed()` and `createImageData()` methods.
+Return a random `{r, g, b}` color that exist in the Markov chain
 
 
-## Installation
+## Contributing
 
-You can install the module with [npm](https://www.npmjs.com/)
-```sh
-npm install markov-chain-img
-```
+If you find a bug, a typo, or a missing feature, do not hesitate to contribute to this repository !
 
-You can import the module with a CDN like [unpkg](https://unpkg.com/)
-```html
-<script type="text/javascript" src="https://unpkg.com/markov-chain-img@latest"></script>
-```
-
-You can clone the repository & include the `markov-chain-img.js` file in your project:
-```sh
-git clone https://github.com/ogus/markov-chain-img.git
-```
 
 ## License
 
-This project is licensed under the WTFPL - see [LICENSE](LICENSE) for more details
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for more details
