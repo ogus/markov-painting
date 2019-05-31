@@ -1,230 +1,226 @@
-(function (window, document) {
-  'use strict';
+var requestAnimFrame = (function (w) {
+  return w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.mozRequestAnimationFrame;
+})(window);
 
-  var requestAnimFrame = (function (w) {
-    return w.requestAnimationFrame || w.webkitRequestAnimationFrame || w.mozRequestAnimationFrame;
-  })(window);
+var RandomStack = function (length) {
+  this._data = new Array(length);
+  this.length = 0;
 
-  var RandomQueue = function (size) {
-    this.container = new Array(size);
-    this.lastIdx = 0;
-
-    this.length = function () {
-      return this.lastIdx;
-    };
-
-    this.enqueue = function (e) {
-      this.container[this.lastIdx++] = e;
-    };
-
-    this.dequeue = function () {
-      if(this.lastIdx == 0) {
-        return null;
-      }
-      let idx = Math.floor(Math.random() * this.lastIdx);
-      let t = this.container[idx];
-      this.container[idx] = this.container[--this.lastIdx];
-      return t;
-    }
+  this.push = function (e) {
+    this._data[this.length++] = e;
   };
 
-  var neighbors = [{dx: -1, dy: 0}, {dx: 0, dy: -1}, {dx: 1, dy: 0}, {dx: 0, dy: 1}];
+  this.pop = function () {
+    if (this.length == 0) {
+      return null;
+    }
+    var idx = Math.floor(Math.random() * this.length);
+    var e = this._data[idx];
+    this._data[idx] = this._data[--this.length];
+    return e;
+  }
+};
 
-  // UI variables
-  var canvas, ctx, button, input;
+var Stack = function (length) {
+  this._data = new Array(length);
+  this.length = 0;
 
-  // drawing variables
-  var imgData, markovImage, pixelQueue, isBusy, now, then;
-
-  var config = {
-    width: 800,
-    height: 600,
-    initialPoints: 1,
-    drawingSpeed: 0.06
+  this.push = function (e) {
+    this._data[this.length] = e;
+    this.length++;
   };
 
-  var srcImage = "img/default.jpg";
-
-  /*
-  * UI methods
-  */
-
-  window.onload = function () {
-    canvas = document.getElementById("canvas");
-    canvas.width = config.width;
-    canvas.height = config.height;
-    ctx = canvas.getContext("2d");
-
-    button = document.getElementById("button");
-    input = document.getElementById("file_input");
-
-    imgData = null;
-    markovImage = new MarkovChainImage();
-    pixelQueue = null;
-    setBusy(false);
-    then = now = 0;
-
-    initListener();
-    // getImageFromSrc(srcImage);
-    let defaultImg = document.getElementById("default_img");
-    document.getElementById("preview").src = defaultImg.src;
-    createMarkovModel(defaultImg);
+  this.pop = function () {
+    this.length--;
+    return this._data[this.length];
   }
+};
 
-  function initListener() {
-    document.addEventListener('drop', function (e) {
-      e.preventDefault();
-      readFile(e.dataTransfer.files[0]);
-    });
-    input.addEventListener('change', function () {
-      readFile(input.files[0]);
-    });
+var ADJACENT = [ {x: -1, y: 0}, {x: 0, y: -1}, {x: 1, y: 0}, {x: 0, y: 1} ];
 
-		let prevDefault = function (e) { e.preventDefault() }
-		document.addEventListener('dragenter', prevDefault, false);
-		document.addEventListener('dragover', prevDefault, false);
-		document.addEventListener('dragleave', prevDefault, false);
+var DOM = {
+  canvas: null,
+  ctx: null,
+  input: null,
+  preview: null,
+  button: null
+};
 
-    button.addEventListener("click", function() {
-      animateMarkov();
-    }, false);
-  }
+var ENV = {
+  imageData: null,
+  markovPainting: null,
+  pointStack: null,
+  isBusy: null,
+  isPainting: null,
+  now: null,
+  then: null
+};
 
-  function readFile(file) {
-    if (!isBusy && !!file && file.type.includes('image')) {
-      setBusy(true);
+var CONFIG = {
+  width: 800,
+  height: 600,
+  initialPoints: 1,
+  drawingSpeed: 0.05
+};
 
-      let reader = new FileReader();
-  		reader.addEventListener('load', function () {
-        getImageFromSrc(reader.result);
-      }, false);
-      reader.readAsDataURL(file);
-    }
-  }
+window.onload = function () {
+  initDOM();
+  initEvents();
+  initENV();
 
-  /*
-  * Drawing methods
-  */
+  loadImage(DOM.preview.src);
+}
 
-  function getImageFromSrc(src) {
-    let img = new Image();
-    img.setAttribute('crossOrigin', 'anonymous');
-    img.src = src;
+function initDOM() {
+  DOM.canvas = document.getElementById("canvas");
+  DOM.canvas.width = CONFIG.width;
+  DOM.canvas.height = CONFIG.height;
+  DOM.ctx = DOM.canvas.getContext("2d");
 
-    img.onload = function () {
-      document.getElementById("preview").src = img.src;
-      createMarkovModel(img);
-    }
-  }
+  DOM.input = document.getElementById("file_input");
+  DOM.preview = document.getElementById("preview");
+  DOM.button = document.getElementById("button");
+  DOM.button.textContent = "New Image";
+}
 
-  function createMarkovModel(image) {
-    let canvas = document.createElement("canvas");
-    canvas.width = image.width; canvas.height = image.height;
-    let context = canvas.getContext("2d");
-    context.drawImage(image, 0, 0);
-    let currentImgData = context.getImageData(0, 0, image.width, image.height);
+function initEvents() {
+  let prevDefault = function (e) { e.preventDefault() }
+  document.addEventListener("dragenter", prevDefault, false);
+  document.addEventListener("dragover", prevDefault, false);
+  document.addEventListener("dragleave", prevDefault, false);
+  document.addEventListener("drop", function (e) {
+    e.preventDefault();
+    readFile(e.dataTransfer.files[0]);
+  });
+  DOM.input.addEventListener("change", function () {
+    readFile(DOM.input.files[0]);
+  });
 
+  DOM.button.addEventListener("click", function() {
+    startPainting();
+  });
+}
+
+function initENV() {
+  ENV.markovPainting = new MarkovPainting();
+  ENV.isBusy = false;
+  ENV.then = 0;
+  ENV.now = 0;
+}
+
+function readFile(file) {
+  if (!ENV.isBusy && !!file && file.type.includes("image")) {
     setBusy(true);
-    markovImage.resetModel();
-    markovImage.feedAsync(currentImgData).then(function () {
-      setBusy(false);
-      animateMarkov();
-    });
+    var reader = new FileReader();
+    reader.addEventListener("load", function () {
+      loadImage(reader.result);
+    }, false);
+    reader.readAsDataURL(file);
   }
+}
 
-  function animateMarkov() {
-    pixelQueue = new RandomQueue(canvas.width * canvas.height * 0.005);
-    imgData = ctx.createImageData(canvas.width, canvas.height);
+function loadImage(src) {
+  var image = new Image();
+  image.setAttribute("crossOrigin", "anonymous");
+  image.src = src;
 
-    let x, y, color;
-    for (var i = 0; i < config.initialPoints; i++) {
-      x = Math.floor(Math.random() * canvas.width);
-      y = Math.floor(Math.random() * canvas.height);
-      color = markovImage.getRandomColor();
-      if (color == null) {
-        break;
-      }
-
-      setPixelColor(x, y, color);
-      pixelQueue.enqueue([x, y]);
-    }
-
-    then = Date.now();
-    loop();
+  image.onload = function () {
+    DOM.preview.src = image.src;
+    initMarkovChain(image);
   }
+}
 
-  function loop() {
-    now = Date.now();
-    if( iterate(now-then) ) {
-      ctx.putImageData(imgData, 0, 0);
-      then = now;
-      requestAnimFrame(loop);
-    }
+function initMarkovChain(image) {
+  setBusy(true);
+  ENV.markovPainting.reset();
+  var canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  var context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0);
+  var imageData = context.getImageData(0, 0, image.width, image.height);
+  ENV.markovPainting.feedImageData(imageData);
+
+  var newImageData = ENV.markovPainting.createImageData(DOM.canvas.width, DOM.canvas.height);
+  ENV.imageData = DOM.ctx.createImageData(DOM.canvas.width, DOM.canvas.height);
+  for (var i = 0; i < ENV.imageData.data.length; i++) {
+    ENV.imageData.data[i] = newImageData[i];
   }
+  DOM.ctx.putImageData(ENV.imageData, 0, 0);
+  setBusy(false);
+}
 
-  function iterate(dt) {
-    // if(pixelQueue.length() == 0) {
-    //   return false;
-    // }
-    // adapt number of pixels to draw at constant speed
-    let iterations = config.drawingSpeed * dt * pixelQueue.length();
-    let pixel, color, pixelN, colorN;
-    for (let i = 0; i < iterations; i++) {
-      if(pixelQueue.length() == 0) {
-        return false;
-      }
+function startPainting() {
+  ENV.pointStack = new RandomStack();
+  ENV.imageData = DOM.ctx.createImageData(DOM.canvas.width, DOM.canvas.height);
 
-      pixel = pixelQueue.dequeue();
-      color = getPixelColor(pixel);
-      if(!color) {
-        continue;
-      }
+  var point = {
+    x: Math.floor(Math.random() * DOM.canvas.width),
+    y: Math.floor(Math.random() * DOM.canvas.height)
+  }
+  var color = ENV.markovPainting.getRandomColor();
+  setPixelColor(ENV.imageData, point, color);
+  ENV.pointStack.push(point);
 
-      for (var n of neighbors) {
-        pixelN = [pixel.x + n.x, pixel.y + n.y];
-        if(pixelN[0] >= 0 && pixelN[1] >= 0 && pixelN[0] < canvas.width && pixelN[1] < canvas.height) {
-          colorN = getPixelColor(pixelN);
+  ENV.then = Date.now();
+  loop();
+}
 
-          if(!colorN) {
-            colorN = markovImage.getColorTransition(color);
-            setPixelColor(pixelN[0], pixelN[1], colorN);
-            pixelQueue.enqueue(pixelN);
-          }
+function loop() {
+  ENV.now = Date.now();
+  var drawing = draw();
+  DOM.ctx.putImageData(ENV.imageData, 0, 0);
+  if(drawing) {
+    ENV.then = ENV.now;
+    requestAnimFrame(loop);
+  }
+}
+
+function draw() {
+  var dt = ENV.now - ENV.then;
+  var iterations = CONFIG.drawingSpeed * dt * ENV.pointStack.length;
+  var point = null, color = null;
+  var x = 0, y = 0, nextPoint = null, nextColor = null;
+  for (var i = 0; i < iterations; i++) {
+    if (ENV.pointStack.length == 0) { return false; }
+    point = ENV.pointStack.pop();
+    color = getPixelColor(ENV.imageData, point);
+    for (var k = 0; k < ADJACENT.length; k++) {
+      x = point.x + ADJACENT[k].x,
+      y = point.y + ADJACENT[k].y
+      if(x >= 0 && y >= 0 && x < ENV.imageData.width && y < ENV.imageData.height) {
+        nextPoint = { x: x, y: y };
+        nextColor = getPixelColor(ENV.imageData, nextPoint);
+        if (nextColor.a == 0) {
+          nextColor = ENV.markovPainting.getNextColor(color);
+          setPixelColor(ENV.imageData, nextPoint, nextColor);
+          ENV.pointStack.push(nextPoint);
         }
       }
     }
-    return true;
   }
+  return true;
+}
 
-  function setPixelColor(x, y, color) {
-    let idx = (x + y * imgData.width) << 2;
-    imgData.data[idx] = color.r;
-    imgData.data[idx+1] = color.g;
-    imgData.data[idx+2] = color.b;
-    imgData.data[idx+3] = 255;
+function setPixelColor(imageData, point, color) {
+  var idx = (point.x + point.y * imageData.width) << 2;
+  imageData.data[idx] = color.r;
+  imageData.data[idx+1] = color.g;
+  imageData.data[idx+2] = color.b;
+  imageData.data[idx+3] = 255;
+}
+
+function getPixelColor(imageData, point) {
+  var idx = (point.x + point.y * imageData.width) << 2;
+  return {
+    r: imageData.data[idx],
+    g: imageData.data[idx+1],
+    b: imageData.data[idx+2],
+    a: imageData.data[idx+3]
   }
+}
 
-  function getPixelColor(pixel) {
-    let idx = (pixel.x + pixel.y * imgData.width) << 2;
-    if(imgData.data[idx+3] != 0) {
-      return {
-        r: imgData.data[idx],
-        g: imgData.data[idx+1],
-        b: imgData.data[idx+2]
-      }
-    }
-    return false;
-  }
-
-  function setBusy(b) {
-    if (b) {
-      isBusy = true;
-      button.textContent = "Computing..."
-    }
-    else {
-      isBusy = false;
-      button.textContent = "New Image";
-    }
-  }
-
-})(window, window.document);
+function setBusy(b) {
+  ENV.isBusy = b;
+  DOM.button.textContent = b ? "Computing..." : "New Image";
+}
